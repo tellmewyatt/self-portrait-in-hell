@@ -70,8 +70,10 @@ def add_timesignatures(string, bars):
     current_time = bars[0]
     for i, b in enumerate(barlines[:-1]):
         timesig = f"\\time {bars[i+1].numerator}/{bars[i+1].denominator}"
-        new_string = insert_at_index(new_string, b.end()+inserted, timesig)
-        inserted += len(timesig)
+        if(bars[i+1] != current_time):
+            new_string = insert_at_index(new_string, b.end()+inserted, timesig)
+            inserted += len(timesig)
+            current_time = bars[i+1]
     return new_string
 def run_ly(string, outDir, filename):
     outputFile = os.path.join(outDir, filename)
