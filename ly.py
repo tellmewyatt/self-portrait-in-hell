@@ -50,7 +50,6 @@ def remove_at_index(string, start, end):
     return string[:start]+string[end:]
 def add_barlines(string, bars):
     notes = find_notes(string)
-    print(notes)
     note_n = 0
     inserted = 0
     new_string = string
@@ -110,12 +109,10 @@ def consolidate_ties(string, pos=0):
     inserted += len(insert_note)-len(t.group())
     # Replace Next note
     next_note = noter.search(new_string, t.end()+inserted)
-    print(next_note)
     if(not(next_note.group("durint"))):
         insert_next_note = ""+next_note.group("name")+prev_dur+next_note.group("tie")+" "
         new_string = insert_at_index(new_string, next_note.end(), insert_next_note)
         new_string = remove_at_index(new_string, next_note.start(), next_note.end())
-    print(new_string)
     return consolidate_ties(new_string, pos+inserted+t.end())
     # Returns tie groups
 def run_ly(string, outDir, filename):
@@ -123,7 +120,26 @@ def run_ly(string, outDir, filename):
     with open(outputFile, "w") as lyfile:
         lyfile.write(string)
     subprocess.run(["lilypond", "-o", outDir, outputFile], shell=True)
+def to_variable(name, expression):
+    return f"{name} = {expression}"
+def to_staff(instrumentName, shortInstrumentName, expression):
+    return "\\new Staff \with { instrumentName = \"#NAME\" shortInstrumentName = \"#SHORTNAME\" } { #MUSIC }"\
+    .replace("#SHORTNAME", shortInstrumentName).replace("#NAME", instrumentName).replace("#MUSIC", expression)
+def to_score(vars, staves):
+    return """
+    \\version "2.22.2"
+    \\header { }
+
+    #VARS
+    \\score { 
+        << #STAVES >> 
+        \\layout { }
+    }""".replace("#STAVES", "\n".join(staves)).replace("#VARS", "\n".join(vars))
 test_bars =[ Fraction(4,4), Fraction(4,4), Fraction(3, 4), Fraction(2,4)]
 test_expression = "{ a4~ a~ a~ a~ a~ a e f g a~ a b c~ c~ c b c d e f g a b c } "
-run_ly(
-    consolidate_ties(add_timesignatures(add_barlines(test_expression, test_bars), test_bars)), "./output", "test.ly")
+viola_var = to_variable("violamusic", consolidate_ties(\
+    add_timesignatures(\
+    add_barlines(test_expression, test_bars), test_bars)))
+viola_staff = to_staff("Viola", "Vla.", "\\violamusic")
+score = to_score([viola_var],[viola_staff])
+run_ly(score, "./output", "test.ly")
