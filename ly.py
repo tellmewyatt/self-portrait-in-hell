@@ -3,7 +3,7 @@ from re import Match
 from fractions import Fraction
 import subprocess
 import os
-noter = re.compile("(?P<name>(?!\\\\)[abcdefgsi,']+)(?:(?P<durint>[0-9]))?(?:(?P<durdots>[\.]*))?(?:(?P<tie>~?))?")
+noter = re.compile("(?=\\b)(?P<name>[abcdefg](?:is|es)?(?:[',]*)?)(?:(?P<durint>[0-9]))?(?:(?P<durdots>[\.]*))?(?:(?P<tie>~?))?")
 barliner = re.compile("\|")
 timesignaturer = re.compile("\\\\time (?P<numerator>[0-9]*)\/(?P<denominator>[0-9]*)")
 def find_notes(string):
@@ -17,7 +17,7 @@ def find_timesignatures(string):
     timesignatures = timesignaturer.finditer(string)
     return [b for b in timesignatures]
 
-def get_dur_as_frac(note: Match, string):
+def get_dur_as_frac(note: Match):
     def has_dur(note):
         i = int(note.group("durint"))
         dots = note.group("durdots")
@@ -30,7 +30,7 @@ def get_dur_as_frac(note: Match, string):
     if(note.group("durint")):
         return has_dur(note)
     else:
-        notes = find_notes(string[:note.start()])
+        notes = find_notes(note.string[:note.start()])
         for n in range(len(notes), 0):
             if(n.group("durint")):
                 return has_dur(note)
@@ -50,6 +50,7 @@ def remove_at_index(string, start, end):
     return string[:start]+string[end:]
 def add_barlines(string, bars):
     notes = find_notes(string)
+    print(notes)
     note_n = 0
     inserted = 0
     new_string = string
@@ -57,7 +58,7 @@ def add_barlines(string, bars):
         total = 0
         while(total < b and note_n < len(notes)):
             note = notes[note_n]
-            note_val = get_dur_as_frac(notes[note_n], new_string)
+            note_val = get_dur_as_frac(notes[note_n])
             total += note_val
             if(total == b):
                 barline = " |"
@@ -66,6 +67,7 @@ def add_barlines(string, bars):
             if(total > b):
                 print("Bar overflow!")
             note_n += 1
+    print("Added barlines:"+new_string)
     return new_string
 def add_timesignatures(string, bars):
     timesigs = find_timesignatures(string)
@@ -87,24 +89,34 @@ def add_timesignatures(string, bars):
             new_string = insert_at_index(new_string, b.end()+inserted, timesig)
             inserted += len(timesig)
             current_time = bars[i+1]
+    print("Added time signatures:"+new_string)
     return new_string
-def consolidate_ties(string):
+def consolidate_ties(string, pos=0):
     tier = re.compile("(\w+~+\s+)+(?:([abcdefgis0-9,\.']+))?")
     new_string = string
-    tiechains = tier.finditer(string)
+    t = tier.search(string, pos)
+    if(t == None):
+        return string
     inserted = 0
-    for t in tiechains:
-        total_l = 0
-        notes = find_notes(t.group())
-        for n in notes:
-            total_l += get_dur_as_frac(n, new_string)
-        total_dur = get_dur_from_frac(total_l)
-
-        insert_note = notes[0].group("name")+total_dur+notes[-1].group("tie")+" "
-        new_string = insert_at_index(new_string, inserted+t.end(), insert_note)
-        new_string = remove_at_index(new_string, t.start()+inserted, t.end()+inserted)
-        inserted += len(insert_note)-len(t.group())
-    return new_string
+    total_l = 0
+    notes = find_notes(t.group())
+    total_l = sum(get_dur_as_frac(n) for n in notes)
+    prev_dur = get_dur_from_frac(get_dur_as_frac(notes[-1]))
+    total_dur = get_dur_from_frac(total_l)
+    # Replace Tie
+    insert_note = notes[0].group("name")+total_dur+notes[-1].group("tie")+" "
+    new_string = insert_at_index(new_string, inserted+t.end(), insert_note)
+    new_string = remove_at_index(new_string, t.start()+inserted, t.end()+inserted)
+    inserted += len(insert_note)-len(t.group())
+    # Replace Next note
+    next_note = noter.search(new_string, t.end()+inserted)
+    print(next_note)
+    if(not(next_note.group("durint"))):
+        insert_next_note = ""+next_note.group("name")+prev_dur+next_note.group("tie")+" "
+        new_string = insert_at_index(new_string, next_note.end(), insert_next_note)
+        new_string = remove_at_index(new_string, next_note.start(), next_note.end())
+    print(new_string)
+    return consolidate_ties(new_string, pos+inserted+t.end())
     # Returns tie groups
 def run_ly(string, outDir, filename):
     outputFile = os.path.join(outDir, filename)
