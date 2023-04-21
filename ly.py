@@ -6,18 +6,18 @@ import os
 noter = re.compile("(?=\\b)(?P<name>[abcdefg](?:is|es)?(?:[',]*)?)(?:(?P<durint>[0-9]))?(?:(?P<durdots>[\.]*))?(?:(?P<tie>~?))?")
 barliner = re.compile("\|")
 timesignaturer = re.compile("\\\\time (?P<numerator>[0-9]*)\/(?P<denominator>[0-9]*)")
-def find_notes(string):
+def find_notes(string: str) -> Match:
     notes = noter.finditer(string)
     notes = [n for n in notes if(len(n.group("name")) > 0)]
     return notes
-def find_barlines(string):
+def find_barlines(string: str) -> Match:
     barlines = barliner.finditer(string)
     return [b for b in barlines]
-def find_timesignatures(string):
+def find_timesignatures(string: str) -> Match:
     timesignatures = timesignaturer.finditer(string)
     return [b for b in timesignatures]
 
-def get_dur_as_frac(note: Match):
+def get_dur_as_frac(note: Match) -> Fraction:
     def has_dur(note):
         i = int(note.group("durint"))
         dots = note.group("durdots")
@@ -44,11 +44,11 @@ def get_dur_from_frac(fraction):
     if(remainder.numerator == 7):
         return f"{remainder.denominatoor}.."
     else: return "1"
-def insert_at_index(string, index, item):
+def insert_at_index(string:str, index:int, item:str) -> str:
     return string[:index]+item+string[index:]
 def remove_at_index(string, start, end):
     return string[:start]+string[end:]
-def add_barlines(string, bars):
+def add_barlines(string:str, bars:Match) -> str:
     notes = find_notes(string)
     note_n = 0
     inserted = 0
@@ -68,7 +68,8 @@ def add_barlines(string, bars):
             note_n += 1
     print("Added barlines:"+new_string)
     return new_string
-def add_timesignatures(string, bars):
+def add_timesignatures(string:str, bars:Fraction) -> str:
+    """ Adds time signatures """
     timesigs = find_timesignatures(string)
     new_string = string
     removed = 0
@@ -90,7 +91,8 @@ def add_timesignatures(string, bars):
             current_time = bars[i+1]
     print("Added time signatures:"+new_string)
     return new_string
-def consolidate_ties(string, pos=0):
+def consolidate_ties(string:str, pos:int=0) -> str:
+    """ Consolidates ties to note values """
     tier = re.compile("(\w+~+\s+)+(?:([abcdefgis0-9,\.']+))?")
     new_string = string
     t = tier.search(string, pos)
@@ -115,13 +117,15 @@ def consolidate_ties(string, pos=0):
         new_string = remove_at_index(new_string, next_note.start(), next_note.end())
     return consolidate_ties(new_string, pos+inserted+t.end())
     # Returns tie groups
-def run_ly(string, outDir, filename):
+def run_ly(string:str, outDir:str, filename:str) -> None:
+    """ Runs lilypond and generates an output file """
     outputFile = os.path.join(outDir, filename)
     with open(outputFile, "w") as lyfile:
         lyfile.write(string)
     subprocess.run(["lilypond", "-o", outDir, outputFile], shell=True)
-def to_variable(name, expression):
+def to_variable(name: str, expression: str) -> str:
+    """ Returns a string variable in the format name = expression """
     return f"{name} = {expression}"
-def to_staff(instrumentName, shortInstrumentName, expression):
+def to_staff(instrumentName:str, shortInstrumentName:str, expression:str) ->str:
     return "\\new Staff \with { instrumentName = \"#NAME\" shortInstrumentName = \"#SHORTNAME\" } { #MUSIC }"\
     .replace("#SHORTNAME", shortInstrumentName).replace("#NAME", instrumentName).replace("#MUSIC", expression)
