@@ -125,21 +125,3 @@ def to_variable(name, expression):
 def to_staff(instrumentName, shortInstrumentName, expression):
     return "\\new Staff \with { instrumentName = \"#NAME\" shortInstrumentName = \"#SHORTNAME\" } { #MUSIC }"\
     .replace("#SHORTNAME", shortInstrumentName).replace("#NAME", instrumentName).replace("#MUSIC", expression)
-def to_score(vars, staves):
-    return """
-    \\version "2.22.2"
-    \\header { }
-
-    #VARS
-    \\score { 
-        << #STAVES >> 
-        \\layout { }
-    }""".replace("#STAVES", "\n".join(staves)).replace("#VARS", "\n".join(vars))
-test_bars =[ Fraction(4,4), Fraction(4,4), Fraction(3, 4), Fraction(2,4)]
-test_expression = "{ a4~ a~ a~ a~ a~ a e f g a~ a b c~ c~ c b c d e f g a b c } "
-viola_var = to_variable("violamusic", consolidate_ties(\
-    add_timesignatures(\
-    add_barlines(test_expression, test_bars), test_bars)))
-viola_staff = to_staff("Viola", "Vla.", "\\violamusic")
-score = to_score([viola_var],[viola_staff])
-run_ly(score, "./output", "test.ly")
