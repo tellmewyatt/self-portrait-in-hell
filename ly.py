@@ -3,13 +3,16 @@ from re import Match
 from fractions import Fraction
 import subprocess
 import os
-noter = re.compile("(?=\\b)(?P<name>[abcdefg](?:is|es)?(?:[',]*)?)(?:(?P<durint>[0-9]))?(?:(?P<durdots>[\.]*))?(?:(?P<tie>~?))?")
+from scales import chromatic
+noter = re.compile("(?=\\b)(?P<name>[abcdefg](?:is|es)?(?:(?P<octave>[',]*))?)(?:(?P<durint>[0-9]))?(?:(?P<durdots>[\.]*))?(?:(?P<tie>~?))?")
 barliner = re.compile("\|")
 timesignaturer = re.compile("\\\\time (?P<numerator>[0-9]*)\/(?P<denominator>[0-9]*)")
 def find_notes(string: str) -> Match:
     notes = noter.finditer(string)
     notes = [n for n in notes if(len(n.group("name")) > 0)]
     return notes
+def find_note(string: str) -> Match:
+    return noter.search(string)
 def find_barlines(string: str) -> Match:
     barlines = barliner.finditer(string)
     return [b for b in barlines]
@@ -129,3 +132,5 @@ def to_variable(name: str, expression: str) -> str:
 def to_staff(instrumentName:str, shortInstrumentName:str, expression:str) ->str:
     return "\\new Staff \with { instrumentName = \"#NAME\" shortInstrumentName = \"#SHORTNAME\" } { #MUSIC }"\
     .replace("#SHORTNAME", shortInstrumentName).replace("#NAME", instrumentName).replace("#MUSIC", expression)
+def note_to_midi(note: Match) -> int:
+    return chromatic.from_lilypond(note.group())
