@@ -11,7 +11,7 @@ class Scale:
         displacement = pitch["octave"]-3
         octave_string = ""
         if(displacement < 0):
-            octave_string = "," * displacement
+            octave_string = "," * (-displacement)
         else:
             octave_string = "\'" * displacement
         return f"{pitch['name']}{octave_string}"
@@ -26,6 +26,4 @@ class Scale:
         if("\'" in octave_str):
             octave += len(octave_str)
         return self.pitches.index({ "name": name, "octave": octave })
-
-
 chromatic = Scale(["c", "des", "d", "ees", "e", "f", "ges", "g", "aes", "a", "bes", "b"])

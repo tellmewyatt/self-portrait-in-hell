@@ -7,6 +7,9 @@ from scales import chromatic
 noter = re.compile("(?=\\b)(?P<name>[abcdefg](?:is|es)?(?:(?P<octave>[',]*))?)(?:(?P<durint>[0-9]))?(?:(?P<durdots>[\.]*))?(?:(?P<tie>~?))?")
 barliner = re.compile("\|")
 timesignaturer = re.compile("\\\\time (?P<numerator>[0-9]*)\/(?P<denominator>[0-9]*)")
+class Duration (Fraction):
+    def __init(self):
+        super().__init__()
 def find_notes(string: str) -> Match:
     notes = noter.finditer(string)
     notes = [n for n in notes if(len(n.group("name")) > 0)]
